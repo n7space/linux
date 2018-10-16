@@ -13,6 +13,7 @@
 #include <linux/init.h>
 #include <linux/perf_event.h>
 #include <linux/percpu-defs.h>
+#include <linux/sched.h> /* for task_pid_nr() */
 #include <linux/slab.h>
 #include <linux/stringhash.h>
 #include <linux/types.h>
@@ -210,6 +211,7 @@ static void *etm_setup_aux(struct perf_event *event, void **pages,
 	u32 id;
 	int cpu = event->cpu;
 	cpumask_t *mask;
+	pid_t pid = task_pid_nr(event->owner);
 	struct coresight_device *sink;
 	struct etm_event_data *event_data = NULL;
 
@@ -277,7 +279,7 @@ static void *etm_setup_aux(struct perf_event *event, void **pages,
 
 	/* Allocate the sink buffer for this session */
 	event_data->snk_config =
-			sink_ops(sink)->alloc_buffer(sink, cpu, pages,
+			sink_ops(sink)->alloc_buffer(sink, cpu, pid, pages,
 						     nr_pages, overwrite);
 	if (!event_data->snk_config)
 		goto err;

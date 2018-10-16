@@ -9,6 +9,7 @@
 #include <linux/coresight.h>
 #include <linux/perf_event.h>
 #include <linux/slab.h>
+#include <linux/types.h>
 #include "coresight-priv.h"
 #include "coresight-tmc.h"
 #include "coresight-etm-perf.h"
@@ -350,8 +351,9 @@ static void tmc_disable_etf_link(struct coresight_device *csdev,
 	dev_dbg(drvdata->dev, "TMC-ETF disabled\n");
 }
 
-static void *tmc_alloc_etf_buffer(struct coresight_device *csdev, int cpu,
-				  void **pages, int nr_pages, bool overwrite)
+static void *tmc_alloc_etf_buffer(struct coresight_device *csdev,
+				  int cpu, pid_t pid, void **pages,
+				  int nr_pages, bool overwrite)
 {
 	int node;
 	struct cs_buffers *buf;

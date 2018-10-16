@@ -9,6 +9,7 @@
 #include <linux/dma-mapping.h>
 #include <linux/iommu.h>
 #include <linux/slab.h>
+#include <linux/types.h>
 #include <linux/vmalloc.h>
 #include "coresight-catu.h"
 #include "coresight-etm-perf.h"
@@ -1209,8 +1210,8 @@ done:
 }
 
 
-static void *tmc_alloc_etr_buffer(struct coresight_device *csdev,
-				  int cpu, void **pages, int nr_pages,
+static void *tmc_alloc_etr_buffer(struct coresight_device *csdev, int cpu,
+				  pid_t pid, void **pages, int nr_pages,
 				  bool snapshot)
 {
 	struct etr_perf_buffer *etr_perf;
