@@ -1160,8 +1160,8 @@ out:
 }
 
 static struct etr_buf *
-tmc_etr_get_etr_buf(struct tmc_drvdata *drvdata, int node,
-		    int nr_pages, void **pages)
+alloc_etr_buf(struct tmc_drvdata *drvdata, int node,
+	      int nr_pages, void **pages)
 {
 	struct etr_buf *etr_buf;
 	unsigned long size;
@@ -1195,6 +1195,22 @@ done:
 	return etr_buf;
 }
 
+static struct etr_buf *
+tmc_etr_get_etr_buf(struct tmc_drvdata *drvdata, int node, pid_t pid,
+		    int nr_pages, void **pages)
+{
+	struct etr_buf *etr_buf;
+
+	etr_buf = alloc_etr_buf(drvdata, node, nr_pages, pages);
+	if (IS_ERR(etr_buf))
+		return etr_buf;
+
+	etr_buf->pid = pid;
+	refcount_set(&etr_buf->refcount, 1);
+
+	return etr_buf;
+}
+
 /*
  * tmc_etr_setup_perf_buf: Allocate ETR buffer for use by perf.
  * The size of the hardware buffer is dependent on the size configured
@@ -1203,7 +1219,7 @@ done:
  * reaches a minimum limit (1M), beyond which we give up.
  */
 static struct etr_perf_buffer *
-tmc_etr_setup_perf_buf(struct tmc_drvdata *drvdata, int node,
+tmc_etr_setup_perf_buf(struct tmc_drvdata *drvdata, int node, pid_t pid,
 		       int nr_pages, void **pages, bool snapshot)
 {
 	struct etr_buf *etr_buf;
@@ -1213,7 +1229,7 @@ tmc_etr_setup_perf_buf(struct tmc_drvdata *drvdata, int node,
 	if (!etr_perf)
 		return ERR_PTR(-ENOMEM);
 
-	etr_buf = tmc_etr_get_etr_buf(drvdata, node, nr_pages, pages);
+	etr_buf = tmc_etr_get_etr_buf(drvdata, node, pid, nr_pages, pages);
 	if (!IS_ERR(etr_buf))
 		goto done;
 
@@ -1236,7 +1252,7 @@ static void *tmc_alloc_etr_buffer(struct coresight_device *csdev, int cpu,
 	if (cpu == -1)
 		cpu = smp_processor_id();
 
-	etr_perf = tmc_etr_setup_perf_buf(drvdata, cpu_to_node(cpu),
+	etr_perf = tmc_etr_setup_perf_buf(drvdata, cpu_to_node(cpu), pid,
 					  nr_pages, pages, snapshot);
 	if (IS_ERR(etr_perf)) {
 		dev_dbg(drvdata->dev, "Unable to allocate ETR buffer\n");
