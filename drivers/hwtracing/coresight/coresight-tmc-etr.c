@@ -7,6 +7,7 @@
 #include <linux/atomic.h>
 #include <linux/coresight.h>
 #include <linux/dma-mapping.h>
+#include <linux/idr.h>
 #include <linux/iommu.h>
 #include <linux/slab.h>
 #include <linux/types.h>
@@ -38,6 +39,9 @@ struct etr_perf_buffer {
 	int			nr_pages;
 	void			**pages;
 };
+
+static DEFINE_IDR(session_idr);
+static DEFINE_MUTEX(session_idr_lock);
 
 /* Convert the perf index to an offset within the ETR buffer */
 #define PERF_IDX2OFF(idx, buf)	((idx) % ((buf)->nr_pages << PAGE_SHIFT))
@@ -1199,7 +1203,21 @@ static struct etr_buf *
 tmc_etr_get_etr_buf(struct tmc_drvdata *drvdata, int node, pid_t pid,
 		    int nr_pages, void **pages)
 {
+	int ret;
 	struct etr_buf *etr_buf;
+
+retry:
+	/* See if a buffer has been allocated for this session */
+	mutex_lock(&session_idr_lock);
+	etr_buf = idr_find(&session_idr, pid);
+	if (etr_buf) {
+		refcount_inc(&etr_buf->refcount);
+		mutex_unlock(&session_idr_lock);
+		return etr_buf;
+	}
+
+	/* If we made it here no buffer has been allocated, do so now. */
+	mutex_unlock(&session_idr_lock);
 
 	etr_buf = alloc_etr_buf(drvdata, node, nr_pages, pages);
 	if (IS_ERR(etr_buf))
@@ -1207,6 +1225,23 @@ tmc_etr_get_etr_buf(struct tmc_drvdata *drvdata, int node, pid_t pid,
 
 	etr_buf->pid = pid;
 	refcount_set(&etr_buf->refcount, 1);
+
+	/* Now that we have a buffer, add it to the IDR. */
+	mutex_lock(&session_idr_lock);
+	ret = idr_alloc(&session_idr, etr_buf, pid, pid + 1, GFP_KERNEL);
+	mutex_unlock(&session_idr_lock);
+
+	/* Another event whith this session ID has allocated this buffer. */
+	if (ret == -ENOSPC) {
+		tmc_free_etr_buf(etr_buf);
+		goto retry;
+	}
+
+	/* The IDR can't allocate room for a new session, abandon ship. */
+	if (ret == -ENOMEM) {
+		tmc_free_etr_buf(etr_buf);
+		return ERR_PTR(ret);
+	}
 
 	return etr_buf;
 }
@@ -1269,9 +1304,32 @@ static void *tmc_alloc_etr_buffer(struct coresight_device *csdev, int cpu,
 static void tmc_free_etr_buffer(void *config)
 {
 	struct etr_perf_buffer *etr_perf = config;
+	struct etr_buf *buf, *etr_buf = etr_perf->etr_buf;
 
-	if (etr_perf->etr_buf)
-		tmc_free_etr_buf(etr_perf->etr_buf);
+	if (!etr_buf)
+		goto free_etr_perf_buffer;
+
+	mutex_lock(&session_idr_lock);
+	/* If we are not the last one to use the buffer, don't touch it. */
+	if (!refcount_dec_and_test(&etr_buf->refcount)) {
+		mutex_unlock(&session_idr_lock);
+		goto free_etr_perf_buffer;
+	}
+
+	/* We are the last one, remove from the IDR and free the buffer. */
+	buf = idr_remove(&session_idr, etr_buf->pid);
+	mutex_unlock(&session_idr_lock);
+
+	/*
+	 * Something went very wrong - the buffer associated with this ID
+	 * is not the same in the IDR.  Leak to avoid use after free.
+	 */
+	if (WARN_ON(buf != etr_buf))
+		goto free_etr_perf_buffer;
+
+	tmc_free_etr_buf(etr_perf->etr_buf);
+
+free_etr_perf_buffer:
 	kfree(etr_perf);
 }
 
