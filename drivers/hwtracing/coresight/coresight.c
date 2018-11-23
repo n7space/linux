@@ -483,6 +483,31 @@ err:
 	goto out;
 }
 
+int coresight_sink_is_shared(struct list_head *path)
+{
+	enum coresight_dev_type type;
+	enum coresight_dev_subtype_link subtype;
+	struct coresight_node *nd;
+	struct coresight_device *csdev;
+
+	if (!path)
+		return -EINVAL;
+
+	/* Go through each of the entries in the path */
+	list_for_each_entry(nd, path, link) {
+		csdev = nd->csdev;
+		type = csdev->type;
+		subtype = csdev->subtype.link_subtype;
+
+		/* If we find a funnel the sink is shared */
+		if (type == CORESIGHT_DEV_TYPE_LINK &&
+		    subtype == CORESIGHT_DEV_SUBTYPE_LINK_MERG)
+			return 1;
+	}
+
+	return 0;
+}
+
 struct coresight_device *coresight_get_sink(struct list_head *path)
 {
 	struct coresight_device *csdev;
