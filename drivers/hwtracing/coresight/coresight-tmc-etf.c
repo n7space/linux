@@ -376,7 +376,7 @@ static void tmc_disable_etf_link(struct coresight_device *csdev,
 	dev_dbg(drvdata->dev, "TMC-ETF disabled\n");
 }
 
-static void *tmc_alloc_etf_buffer(struct coresight_device *csdev,
+static void *tmc_alloc_etf_buffer(struct list_head *path,
 				  int cpu, pid_t pid, void **pages,
 				  int nr_pages, bool overwrite)
 {

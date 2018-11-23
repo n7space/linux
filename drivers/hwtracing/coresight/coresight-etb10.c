@@ -381,7 +381,7 @@ static int etb_disable(struct coresight_device *csdev)
 	return 0;
 }
 
-static void *etb_alloc_buffer(struct coresight_device *csdev, int cpu,
+static void *etb_alloc_buffer(struct list_head *path, int cpu,
 			      pid_t pid, void **pages, int nr_pages,
 			      bool overwrite)
 {

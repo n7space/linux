@@ -214,6 +214,7 @@ static void *etm_setup_aux(struct perf_event *event, void **pages,
 	pid_t pid = task_pid_nr(event->owner);
 	struct coresight_device *sink;
 	struct etm_event_data *event_data = NULL;
+	struct list_head *path = NULL;
 
 	event_data = alloc_event_data(cpu);
 	if (!event_data)
@@ -241,7 +242,6 @@ static void *etm_setup_aux(struct perf_event *event, void **pages,
 	 * CPUs, we can handle it and fail the session.
 	 */
 	for_each_cpu(cpu, mask) {
-		struct list_head *path;
 		struct coresight_device *csdev;
 
 		csdev = per_cpu(csdev_src, cpu);
@@ -277,9 +277,12 @@ static void *etm_setup_aux(struct perf_event *event, void **pages,
 	if (!sink_ops(sink)->alloc_buffer || !sink_ops(sink)->free_buffer)
 		goto err;
 
-	/* Allocate the sink buffer for this session */
+	/*
+	 * Allocate the sink buffer for this session.  In per-thread mode
+	 * any path from source to sink will do.
+	 */
 	event_data->snk_config =
-			sink_ops(sink)->alloc_buffer(sink, cpu, pid, pages,
+			sink_ops(sink)->alloc_buffer(path, cpu, pid, pages,
 						     nr_pages, overwrite);
 	if (!event_data->snk_config)
 		goto err;

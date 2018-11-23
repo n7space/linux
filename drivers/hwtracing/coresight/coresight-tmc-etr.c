@@ -1277,12 +1277,19 @@ done:
 }
 
 
-static void *tmc_alloc_etr_buffer(struct coresight_device *csdev, int cpu,
+static void *tmc_alloc_etr_buffer(struct list_head *path, int cpu,
 				  pid_t pid, void **pages, int nr_pages,
 				  bool snapshot)
 {
 	struct etr_perf_buffer *etr_perf;
-	struct tmc_drvdata *drvdata = dev_get_drvdata(csdev->dev.parent);
+	struct coresight_device *csdev;
+	struct tmc_drvdata *drvdata;
+
+	csdev = coresight_get_sink(path);
+	if (!csdev)
+		return NULL;
+
+	drvdata = dev_get_drvdata(csdev->dev.parent);
 
 	if (cpu == -1)
 		cpu = smp_processor_id();
