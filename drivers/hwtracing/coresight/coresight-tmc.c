@@ -417,6 +417,8 @@ static int tmc_probe(struct amba_device *adev, const struct amba_id *id)
 	drvdata->memwidth = tmc_get_memwidth(devid);
 	/* This device is not associated with a session */
 	drvdata->pid = -1;
+	/* No way to know what kind of topology we have */
+	drvdata->shared = -1;
 
 	if (drvdata->config_type == TMC_CONFIG_TYPE_ETR) {
 		if (np)

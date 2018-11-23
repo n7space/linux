@@ -1276,6 +1276,22 @@ done:
 	return etr_perf;
 }
 
+static int tmc_etr_is_shared(struct tmc_drvdata *drvdata,
+			     struct list_head *path)
+{
+	int shared;
+
+	/* The HW topology is static, no need to check this twice */
+	if (drvdata->shared >= 0)
+		return 0;
+
+	shared = coresight_sink_is_shared(path);
+	if (shared == -EINVAL)
+		return shared;
+
+	drvdata->shared = shared;
+	return 0;
+}
 
 static void *tmc_alloc_etr_buffer(struct list_head *path, int cpu,
 				  pid_t pid, void **pages, int nr_pages,
@@ -1290,6 +1306,9 @@ static void *tmc_alloc_etr_buffer(struct list_head *path, int cpu,
 		return NULL;
 
 	drvdata = dev_get_drvdata(csdev->dev.parent);
+
+	if (tmc_etr_is_shared(drvdata, path))
+		return NULL;
 
 	if (cpu == -1)
 		cpu = smp_processor_id();
