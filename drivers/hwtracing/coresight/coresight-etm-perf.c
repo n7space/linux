@@ -282,7 +282,8 @@ static void *etm_setup_aux(struct perf_event *event, void **pages,
 	 * any path from source to sink will do.
 	 */
 	event_data->snk_config =
-			sink_ops(sink)->alloc_buffer(path, cpu, pid, pages,
+			sink_ops(sink)->alloc_buffer(path, event->cpu,
+						     pid, pages,
 						     nr_pages, overwrite);
 	if (!event_data->snk_config)
 		goto err;

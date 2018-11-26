@@ -813,16 +813,22 @@ static inline int tmc_etr_mode_alloc_buf(int mode,
  */
 static struct etr_buf *tmc_alloc_etr_buf(struct tmc_drvdata *drvdata,
 					 ssize_t size, int flags,
-					 int node, void **pages)
+					 int cpu, void **pages)
 {
-	int rc = -ENOMEM;
+	int rc = -ENOMEM, node;
 	bool has_etr_sg, has_iommu;
 	bool has_sg, has_catu;
+	bool cpu_wide, is_shared;
 	struct etr_buf *etr_buf;
+
+	node = (cpu != -1) ? cpu_to_node(cpu) :
+			     cpu_to_node(smp_processor_id());
 
 	has_etr_sg = tmc_etr_has_cap(drvdata, TMC_ETR_SG);
 	has_iommu = iommu_get_domain_for_dev(drvdata->dev);
 	has_catu = !!tmc_etr_get_catu_device(drvdata);
+	cpu_wide = (cpu != -1);
+	is_shared = drvdata->shared;
 
 	has_sg = has_catu || has_etr_sg;
 
@@ -833,10 +839,14 @@ static struct etr_buf *tmc_alloc_etr_buf(struct tmc_drvdata *drvdata,
 	etr_buf->size = size;
 
 	/*
-	 * If we have to use an existing list of pages, we cannot reliably
-	 * use a contiguous DMA memory (even if we have an IOMMU). Otherwise,
-	 * we use the contiguous DMA memory if at least one of the following
-	 * conditions is true:
+	 * If the ETR is shared and we have a CPU-wide trace scenario, we
+	 * need to use double buffering (i.e flat mode) in order to control
+	 * concurrency.
+	 *
+	 * Furthermore, if we have to use an existing list of pages, we cannot
+	 * reliably use a contiguous DMA memory (even if we have an IOMMU).
+	 * Otherwise, we use the contiguous DMA memory if at least one of the
+	 * following conditions is true:
 	 *  a) The ETR cannot use Scatter-Gather.
 	 *  b) we have a backing IOMMU
 	 *  c) The requested memory size is smaller (< 1M).
@@ -844,6 +854,9 @@ static struct etr_buf *tmc_alloc_etr_buf(struct tmc_drvdata *drvdata,
 	 * Fallback to available mechanisms.
 	 *
 	 */
+	if (cpu_wide && is_shared)
+		rc = tmc_etr_mode_alloc_buf(ETR_MODE_FLAT, drvdata,
+					    etr_buf, node, pages);
 	if (!pages &&
 	    (!has_sg || has_iommu || size < SZ_1M))
 		rc = tmc_etr_mode_alloc_buf(ETR_MODE_FLAT, drvdata,
@@ -1164,7 +1177,7 @@ out:
 }
 
 static struct etr_buf *
-alloc_etr_buf(struct tmc_drvdata *drvdata, int node,
+alloc_etr_buf(struct tmc_drvdata *drvdata, int cpu,
 	      int nr_pages, void **pages)
 {
 	struct etr_buf *etr_buf;
@@ -1176,7 +1189,7 @@ alloc_etr_buf(struct tmc_drvdata *drvdata, int node,
 	 */
 	if ((nr_pages << PAGE_SHIFT) > drvdata->size) {
 		etr_buf = tmc_alloc_etr_buf(drvdata, (nr_pages << PAGE_SHIFT),
-					    0, node, NULL);
+					    0, cpu, NULL);
 		if (!IS_ERR(etr_buf))
 			goto done;
 	}
@@ -1187,7 +1200,7 @@ alloc_etr_buf(struct tmc_drvdata *drvdata, int node,
 	 */
 	size = drvdata->size;
 	do {
-		etr_buf = tmc_alloc_etr_buf(drvdata, size, 0, node, NULL);
+		etr_buf = tmc_alloc_etr_buf(drvdata, size, 0, cpu, NULL);
 		if (!IS_ERR(etr_buf))
 			goto done;
 		size /= 2;
@@ -1200,7 +1213,7 @@ done:
 }
 
 static struct etr_buf *
-tmc_etr_get_etr_buf(struct tmc_drvdata *drvdata, int node, pid_t pid,
+tmc_etr_get_etr_buf(struct tmc_drvdata *drvdata, int cpu, pid_t pid,
 		    int nr_pages, void **pages)
 {
 	int ret;
@@ -1219,7 +1232,7 @@ retry:
 	/* If we made it here no buffer has been allocated, do so now. */
 	mutex_unlock(&session_idr_lock);
 
-	etr_buf = alloc_etr_buf(drvdata, node, nr_pages, pages);
+	etr_buf = alloc_etr_buf(drvdata, cpu, nr_pages, pages);
 	if (IS_ERR(etr_buf))
 		return etr_buf;
 
@@ -1254,17 +1267,21 @@ retry:
  * reaches a minimum limit (1M), beyond which we give up.
  */
 static struct etr_perf_buffer *
-tmc_etr_setup_perf_buf(struct tmc_drvdata *drvdata, int node, pid_t pid,
+tmc_etr_setup_perf_buf(struct tmc_drvdata *drvdata, int cpu, pid_t pid,
 		       int nr_pages, void **pages, bool snapshot)
 {
+	int node;
 	struct etr_buf *etr_buf;
 	struct etr_perf_buffer *etr_perf;
+
+	node = (cpu != -1) ? cpu_to_node(cpu) :
+			     cpu_to_node(smp_processor_id());
 
 	etr_perf = kzalloc_node(sizeof(*etr_perf), GFP_KERNEL, node);
 	if (!etr_perf)
 		return ERR_PTR(-ENOMEM);
 
-	etr_buf = tmc_etr_get_etr_buf(drvdata, node, pid, nr_pages, pages);
+	etr_buf = tmc_etr_get_etr_buf(drvdata, cpu, pid, nr_pages, pages);
 	if (!IS_ERR(etr_buf))
 		goto done;
 
@@ -1310,10 +1327,7 @@ static void *tmc_alloc_etr_buffer(struct list_head *path, int cpu,
 	if (tmc_etr_is_shared(drvdata, path))
 		return NULL;
 
-	if (cpu == -1)
-		cpu = smp_processor_id();
-
-	etr_perf = tmc_etr_setup_perf_buf(drvdata, cpu_to_node(cpu), pid,
+	etr_perf = tmc_etr_setup_perf_buf(drvdata, cpu, pid,
 					  nr_pages, pages, snapshot);
 	if (IS_ERR(etr_perf)) {
 		dev_dbg(drvdata->dev, "Unable to allocate ETR buffer\n");
