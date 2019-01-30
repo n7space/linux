@@ -10,6 +10,7 @@
 /dts-v1/;
 
 #include "zynqmp.dtsi"
+#include "zynqmp-coresight.dtsi"
 #include "zynqmp-clk.dtsi"
 #include <dt-bindings/gpio/gpio.h>
 
