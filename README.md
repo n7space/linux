@@ -1,8 +1,6 @@
 # Linux kernel
 ## Optimized for Xilinx Zynq Ultrascale+ ZCU104 devboard
 
-Original Linux README moved to README.orig.
-
 ### What's that?
 This branch is based on Linux v5.0-rc4. In addition, it contains:
 * Zynq Ultrascale+ Cortex-A53 CoreSight components DTS
