@@ -4,6 +4,7 @@
         #clock-cells = <0>;
         clock-frequency = <25000000>;
     };
+
     // Cortex a53's ETMs
     etm0@fec40000 {
         compatible = "arm,coresight-etm4x", "arm,primecell";
@@ -11,9 +12,11 @@
         cpu = <&cpu0>;
         clocks = <&misc_clk>;
         clock-names = "apb_pclk";
-        port {
-            etm0_out_port: endpoint {
-                remote-endpoint = <&funnel_in_port0>;
+        out-ports {
+            port {
+                etm0_out_port: endpoint {
+                    remote-endpoint = <&funnel_in_port0>;
+                };
             };
         };
     };
@@ -24,9 +27,11 @@
         cpu = <&cpu1>;
         clocks = <&misc_clk>;
         clock-names = "apb_pclk";
-        port {
-            etm1_out_port: endpoint {
-                remote-endpoint = <&funnel_in_port1>;
+        out-ports {
+            port {
+                etm1_out_port: endpoint {
+                    remote-endpoint = <&funnel_in_port1>;
+                };
             };
         };
     };
@@ -37,9 +42,11 @@
         cpu = <&cpu2>;
         clocks = <&misc_clk>;
         clock-names = "apb_pclk";
-        port {
-            etm2_out_port: endpoint {
-                remote-endpoint = <&funnel_in_port2>;
+        out-ports {
+            port {
+                etm2_out_port: endpoint {
+                    remote-endpoint = <&funnel_in_port2>;
+                };
             };
         };
     };
@@ -50,9 +57,11 @@
         cpu = <&cpu3>;
         clocks = <&misc_clk>;
         clock-names = "apb_pclk";
-        port {
-            etm3_out_port: endpoint {
-                remote-endpoint = <&funnel_in_port3>;
+        out-ports {
+            port {
+                etm3_out_port: endpoint {
+                    remote-endpoint = <&funnel_in_port3>;
+                };
             };
         };
     };
@@ -63,17 +72,14 @@
         reg = <0 0xfe920000 0 0x1000>;
         clocks = <&misc_clk>;
         clock-names = "apb_pclk";
-        ports {
+        in-ports {
             #address-cells = <0x1>;
             #size-cells = <0x0>;
             port@0 {
                 reg = <0x0>;
-                funnel_in_port0: endpoint@0 {
+                funnel_in_port0: endpoint {
                     slave-mode;
                     remote-endpoint = <&etm0_out_port>;
-                };
-                funnel_out_port0: endpoint@1 {
-                    remote-endpoint = <&etb4k_in_port>;
                 };
             };
             port@1 {
@@ -98,6 +104,13 @@
                 };
             };
         };
+        out-ports {
+            port {
+                funnel_out_port0: endpoint {
+                    remote-endpoint = <&etb4k_in_port>;
+                };
+            };
+        };
     };
 
     funnel_main@fe930000 {
@@ -105,16 +118,20 @@
         reg = <0 0xfe930000 0 0x1000>;
         clocks = <&misc_clk>;
         clock-names = "apb_pclk";
-        ports {
+        in-ports {
+            port {
+                funnel_main_in_port0: endpoint {
+                    slave-mode;
+                    remote-endpoint = <&stm_out_port>;
+                };
+            };
+        };
+        out-ports {
             #address-cells = <0x1>;
             #size-cells = <0x0>;
             port@0 {
                 reg = <0x0>;
-                funnel_main_in_port0: endpoint@0 {
-                    slave-mode;
-                    remote-endpoint = <&stm_out_port>;
-                };
-                funnel_main_out_port0: endpoint@1 {
+                funnel_main_out_port0: endpoint {
                     remote-endpoint = <&etb8k_in_port>;
                 };
             };
@@ -149,17 +166,18 @@
         //coresight-default-sink;
         clocks = <&misc_clk>;
         clock-names = "apb_pclk";
-        ports {
-            #address-cells = <0x1>;
-            #size-cells = <0x0>;
-            port@0 {
-                reg = <0>;
-                etb4k_out_port: endpoint@1 {
-                    remote-endpoint = <&funnel_main_in_port1>;
-                };
-                etb4k_in_port: endpoint@0 {
+        in-ports {
+            port {
+                etb4k_in_port: endpoint {
                     slave-mode;
                     remote-endpoint = <&funnel_out_port0>;
+                };
+            };
+        };
+        out-ports {
+            port {
+                etb4k_out_port: endpoint {
+                    remote-endpoint = <&funnel_main_in_port1>;
                 };
             };
         };
@@ -171,17 +189,18 @@
         //coresight-default-sink;
         clocks = <&misc_clk>;
         clock-names = "apb_pclk";
-        ports {
-            #address-cells = <0x1>;
-            #size-cells = <0x0>;
-            port@0 {
-                reg = <0x0>;
-                etb8k_out_port: endpoint@0 {
-                    remote-endpoint = <&replicator_in_port0>;
-                };
-                etb8k_in_port: endpoint@1 {
+        in-ports {
+            port {
+                etb8k_in_port: endpoint {
                     slave-mode;
                     remote-endpoint = <&funnel_main_out_port0>;
+                };
+            };
+        };
+        out-ports {
+            port {
+                etb8k_out_port: endpoint {
+                    remote-endpoint = <&replicator_in_port0>;
                 };
             };
         };
@@ -190,16 +209,20 @@
     // replicator
     replicator {
         compatible = "arm,coresight-replicator";
-        ports {
+        in-ports {
+            port {
+                replicator_in_port0: endpoint {
+                    slave-mode;
+                    remote-endpoint = <&etb8k_out_port>;
+                };
+            };
+        };
+        out-ports {
             #address-cells = <0x1>;
             #size-cells = <0x0>;
             port@0 {
                 reg = <0x0>;
-                replicator_in_port0: endpoint@0 {
-                    slave-mode;
-                    remote-endpoint = <&etb8k_out_port>;
-                };
-                replicator_out_port0: endpoint@1 {
+                replicator_out_port0: endpoint {
                     remote-endpoint = <&etr_in_port>;
                 };
             };
@@ -221,10 +244,12 @@
         clocks = <&misc_clk>;
         clock-names = "apb_pclk";
         // power-domains = <&scpi_devpd 0>;
-        port {
-            etr_in_port: endpoint {
-                slave-mode;
-                remote-endpoint = <&replicator_out_port0>;
+        in-ports {
+            port {
+                etr_in_port: endpoint {
+                    slave-mode;
+                    remote-endpoint = <&replicator_out_port0>;
+                };
             };
         };
     };
@@ -237,10 +262,12 @@
         clocks = <&misc_clk>; // add PL clock also someday
         clock-names = "apb_pclk";
         // power-domains = <&scpi_devpd 0>;
-        port {
-            tpiu_in_port: endpoint {
-                slave-mode;
-                remote-endpoint = <&replicator_out_port1>;
+        in-ports {
+            port {
+                tpiu_in_port: endpoint {
+                    slave-mode;
+                    remote-endpoint = <&replicator_out_port1>;
+                };
             };
         };
     };
@@ -254,9 +281,11 @@
         clocks = <&misc_clk>;
         clock-names = "apb_pclk";
         // power-domains = <&scpi_devpd 0>;
-        port {
-            stm_out_port: endpoint {
-                remote-endpoint = <&funnel_main_in_port0>;
+        out-ports {
+            port {
+                stm_out_port: endpoint {
+                    remote-endpoint = <&funnel_main_in_port0>;
+                };
             };
         };
     };
