@@ -275,9 +275,9 @@
     // STM
     stm@fe9c0000 {
         compatible = "arm,coresight-stm", "arm,primecell";
-        reg = <0 0xfe9c0000 0 0x1000>, <0 0xfe9c0000 0 0x1000>;
+        reg = <0 0xfe9c0000 0 0x1000>,
+            <0 0xf8000000 0 0x1000000>;
         reg-names = "stm-base", "stm-stimulus-base";
-
         clocks = <&misc_clk>;
         clock-names = "apb_pclk";
         // power-domains = <&scpi_devpd 0>;
