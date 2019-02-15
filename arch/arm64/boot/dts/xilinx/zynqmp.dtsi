@@ -12,6 +12,8 @@
  * the License, or (at your option) any later version.
  */
 
+#include "zynqmp-coresight.dtsi"
+
 / {
 	compatible = "xlnx,zynqmp";
 	#address-cells = <2>;
