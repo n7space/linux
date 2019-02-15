@@ -573,8 +573,11 @@ static int zynqmp_register_clocks(struct device_node *np)
 							      parent_names);
 
 		/* Enable clock if init_enable flag is 1 */
-		if (clock[i].init_enable)
+		if (clock[i].init_enable ||
+				(((i > 11 && i < 16) || i == 69) && !clock[i].init_enable)) {
+			pr_err("wzmuda: clk_prepare_enable(%d == %s)\n", i, clock[i].clk_name);
 			clk_prepare_enable(zynqmp_clks[i]);
+		}
 	}
 
 	for (i = 0; i < clock_max_idx; i++) {
@@ -619,6 +622,12 @@ static void zynqmp_get_clock_info(void)
 
 	/* Get topology of all clock */
 	for (i = 0; i < clock_max_idx; i++) {
+		pr_err("wzmuda: clock found:\n");
+		pr_err("wzmuda: \tname: %s (%d)\n", clock[i].clk_name, i);
+		pr_err("wzmuda: \tvalid: %d\n", clock[i].valid);
+		pr_err("wzmuda: \tinit_enable: %d\n", clock[i].init_enable);
+		pr_err("wzmuda: \ttype: %d (%s)\n", clock[i].type, clock[i].type ? "external" : "output");
+
 		ret = get_clock_type(i, &type);
 		if (ret || type != CLK_TYPE_OUTPUT)
 			continue;
@@ -626,11 +635,13 @@ static void zynqmp_get_clock_info(void)
 		ret = clock_get_topology(i, clock[i].node, &clock[i].num_nodes);
 		if (ret)
 			continue;
+		pr_err("wzmuda: \tnum nodes: %d\n", clock[i].num_nodes);
 
 		ret = clock_get_parents(i, clock[i].parent,
 					&clock[i].num_parents);
 		if (ret)
 			continue;
+		pr_err("wzmuda: \tnum parents: %d\n", clock[i].num_parents);
 	}
 }
 
