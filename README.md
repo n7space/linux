@@ -2,7 +2,7 @@
 ## Optimized for Xilinx Zynq Ultrascale+ ZCU104 devboard
 
 ### Intro
-This branch is based on Linux v5.0-rc4. In addition, it contains:
+This branch is based on Linux v5.0 upstream master branch. In addition, it contains:
 * Zynq Ultrascale+ Cortex-A53 CoreSight components DTS
 * Zynq Ultrascale+ `defconfig` borrowed from Xilinx github.
 * Custom `.config` file (based on the Xilinx `defconfig`) with
@@ -10,6 +10,7 @@ This branch is based on Linux v5.0-rc4. In addition, it contains:
   Some unnecessary components (audio, wifi, bt) are removed
   to achieve lower footprint. If you find anything missing,
   feel free to adjust the config.
+* **per-CPU and CPU-wide tracing patches from Linaro**
 * `README.md` file you are just reading.
 
 ### Adjusting config
