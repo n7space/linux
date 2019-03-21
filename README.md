@@ -5,7 +5,7 @@
 This branch is based on Linux v5.0 upstream master branch. In addition, it contains:
 * Zynq Ultrascale+ Cortex-A53 CoreSight components DTS
 * Zynq Ultrascale+ `defconfig` borrowed from Xilinx github.
-* Custom `.config` file (based on the Xilinx `defconfig`) with
+* Custom defconfig file (based on the Xilinx defconfig) with
   CoreSight components, perf subsystem and NFS compiled in.
   Some unnecessary components (audio, wifi, bt) are removed
   to achieve lower footprint. If you find anything missing,
@@ -16,11 +16,19 @@ This branch is based on Linux v5.0 upstream master branch. In addition, it conta
 ### Adjusting config
 It is assumed that you already have AARCH64 GNU toolchain.
 ```
+# The first step is mandatory, to get CoreSight@Zynq configuration
+CROSS_COMPILE=aarch64-linux-gnu- ARCH=arm64 make xilinx_zynqmp_coresight_defconfig
+
+#Menuconfig is optional, to adjust the config to your needs
 CROSS_COMPILE=aarch64-linux-gnu- ARCH=arm64 make menuconfig
 ```
 
-Perform necessary changes and save it in `.config`. Afterwards, you can commit
-the updated configuration.
+Perform necessary changes and save it in `.config`. Afterwards, you can update the defconfig
+```
+CROSS_COMPILE=aarch64-linux-gnu- ARCH=arm64 make save defconfig
+cp defconfig arch/arm64/configs/xilinx_zynqmp_coresight_defconfig
+```
+and commit the updated `defconfig` file. Do not commit `.config`.
 
 ### Building
 It is assumed that you already have AARCH64 GNU toolchain.
