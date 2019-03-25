@@ -111,28 +111,24 @@
             port@0 {
                 reg = <0x0>;
                 funnel1_in_port0: endpoint {
-                    slave-mode;
                     remote-endpoint = <&etm0_out_port>;
                 };
             };
             port@1 {
                 reg = <0x1>;
                 funnel1_in_port1: endpoint {
-                    slave-mode;
                     remote-endpoint = <&etm1_out_port>;
                 };
             };
             port@2 {
                 reg = <0x2>;
                 funnel1_in_port2: endpoint {
-                    slave-mode;
                     remote-endpoint = <&etm2_out_port>;
                 };
             };
             port@3 {
                 reg = <0x3>;
                 funnel1_in_port3: endpoint {
-                    slave-mode;
                     remote-endpoint = <&etm3_out_port>;
                 };
             };
@@ -157,14 +153,12 @@
             port@0 {
                 reg = <0x0>;
                 funnel2_in_port0: endpoint {
-                    slave-mode;
                     remote-endpoint = <&stm_out_port>;
                 };
             };
             port@2 {
                 reg = <0x2>;
                 funnel2_in_port1: endpoint {
-                    slave-mode;
                     remote-endpoint = <&etf1_out_port>;
                 };
             };
@@ -189,7 +183,6 @@
         in-ports {
             port {
                 etf1_in_port: endpoint {
-                    slave-mode;
                     remote-endpoint = <&funnel1_out_port0>;
                 };
             };
@@ -211,7 +204,6 @@
         in-ports {
             port {
                 etf2_in_port: endpoint {
-                    slave-mode;
                     remote-endpoint = <&funnel2_out_port0>;
                 };
             };
@@ -231,7 +223,6 @@
         in-ports {
             port {
                 replicator_in_port0: endpoint {
-                    slave-mode;
                     remote-endpoint = <&etf2_out_port>;
                 };
             };
@@ -266,7 +257,6 @@
         in-ports {
             port {
                 etr_in_port: endpoint {
-                    slave-mode;
                     remote-endpoint = <&replicator_out_port0>;
                 };
             };
@@ -284,7 +274,6 @@
         in-ports {
             port {
                 tpiu_in_port: endpoint {
-                    slave-mode;
                     remote-endpoint = <&replicator_out_port1>;
                 };
             };
