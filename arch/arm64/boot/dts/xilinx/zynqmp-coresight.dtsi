@@ -5,7 +5,6 @@
         clock-frequency = <25000000>;
     };
 
-    // Cortex a53's ETMs
     etm0@fec40000 {
         compatible = "arm,coresight-etm4x", "arm,primecell";
         reg = <0 0xfec40000 0 0x1000>;
@@ -66,7 +65,6 @@
         };
     };
 
-    // debug components
     debug0@fec10000 {
         compatible = "arm,coresight-cpu-debug", "arm,primecell";
         reg = <0 0xfec10000 0 0x1000>;
@@ -99,7 +97,6 @@
         clock-names = "apb_pclk";
     };
 
-    //funnels
     funnel1@fe920000 {
         compatible = "arm,coresight-funnel", "arm,primecell";
         reg = <0 0xfe920000 0 0x1000>;
@@ -174,7 +171,6 @@
         };
     };
 
-    // ETFs (i.e. FIFOs)
     etf1@fe940000 {
         compatible = "arm,coresight-tmc", "arm,primecell";
         reg = <0 0xfe940000 0 0x1000>;
@@ -217,7 +213,6 @@
         };
     };
 
-    // replicator
     replicator {
         compatible = "arm,coresight-replicator";
         in-ports {
@@ -245,15 +240,12 @@
         };
     };
 
-    // ETR - trace router
     etr@fe970000 {
         compatible = "arm,coresight-tmc", "arm,primecell";
         reg = <0 0xfe970000 0 0x1000>;
-        // iommus = <&smmu_etr 0>;
 
         clocks = <&misc_clk>;
         clock-names = "apb_pclk";
-        // power-domains = <&scpi_devpd 0>;
         in-ports {
             port {
                 etr_in_port: endpoint {
@@ -263,14 +255,12 @@
         };
     };
 
-    // TPIU
     tpiu@fe980000  {
         compatible = "arm,coresight-tpiu", "arm,primecell";
         reg = <0 0xfe980000 0 0x1000>;
 
-        clocks = <&misc_clk>; // add PL clock also someday
+        clocks = <&misc_clk>;
         clock-names = "apb_pclk";
-        // power-domains = <&scpi_devpd 0>;
         in-ports {
             port {
                 tpiu_in_port: endpoint {
@@ -280,7 +270,6 @@
         };
     };
 
-    // STM
     stm@fe9c0000 {
         compatible = "arm,coresight-stm", "arm,primecell";
         reg = <0 0xfe9c0000 0 0x1000>,
@@ -288,7 +277,6 @@
         reg-names = "stm-base", "stm-stimulus-base";
         clocks = <&misc_clk>;
         clock-names = "apb_pclk";
-        // power-domains = <&scpi_devpd 0>;
         out-ports {
             port {
                 stm_out_port: endpoint {
