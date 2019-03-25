@@ -161,8 +161,8 @@
                     remote-endpoint = <&stm_out_port>;
                 };
             };
-            port@1 {
-                reg = <0x1>;
+            port@2 {
+                reg = <0x2>;
                 funnel2_in_port1: endpoint {
                     slave-mode;
                     remote-endpoint = <&etf1_out_port>;
