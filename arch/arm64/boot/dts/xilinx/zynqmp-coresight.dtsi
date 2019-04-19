@@ -5,7 +5,6 @@
         clock-frequency = <25000000>;
     };
 
-    // Cortex a53's ETMs
     etm0@fec40000 {
         compatible = "arm,coresight-etm4x", "arm,primecell";
         reg = <0 0xfec40000 0 0x1000>;
@@ -66,7 +65,6 @@
         };
     };
 
-    // debug components
     debug0@fec10000 {
         compatible = "arm,coresight-cpu-debug", "arm,primecell";
         reg = <0 0xfec10000 0 0x1000>;
@@ -99,7 +97,6 @@
         clock-names = "apb_pclk";
     };
 
-    //funnels
     funnel1@fe920000 {
         compatible = "arm,coresight-funnel", "arm,primecell";
         reg = <0 0xfe920000 0 0x1000>;
@@ -111,28 +108,24 @@
             port@0 {
                 reg = <0x0>;
                 funnel1_in_port0: endpoint {
-                    slave-mode;
                     remote-endpoint = <&etm0_out_port>;
                 };
             };
             port@1 {
                 reg = <0x1>;
                 funnel1_in_port1: endpoint {
-                    slave-mode;
                     remote-endpoint = <&etm1_out_port>;
                 };
             };
             port@2 {
                 reg = <0x2>;
                 funnel1_in_port2: endpoint {
-                    slave-mode;
                     remote-endpoint = <&etm2_out_port>;
                 };
             };
             port@3 {
                 reg = <0x3>;
                 funnel1_in_port3: endpoint {
-                    slave-mode;
                     remote-endpoint = <&etm3_out_port>;
                 };
             };
@@ -157,14 +150,12 @@
             port@0 {
                 reg = <0x0>;
                 funnel2_in_port0: endpoint {
-                    slave-mode;
                     remote-endpoint = <&stm_out_port>;
                 };
             };
-            port@1 {
-                reg = <0x1>;
+            port@2 {
+                reg = <0x2>;
                 funnel2_in_port1: endpoint {
-                    slave-mode;
                     remote-endpoint = <&etf1_out_port>;
                 };
             };
@@ -180,7 +171,6 @@
         };
     };
 
-    // ETFs (i.e. FIFOs)
     etf1@fe940000 {
         compatible = "arm,coresight-tmc", "arm,primecell";
         reg = <0 0xfe940000 0 0x1000>;
@@ -189,7 +179,6 @@
         in-ports {
             port {
                 etf1_in_port: endpoint {
-                    slave-mode;
                     remote-endpoint = <&funnel1_out_port0>;
                 };
             };
@@ -211,7 +200,6 @@
         in-ports {
             port {
                 etf2_in_port: endpoint {
-                    slave-mode;
                     remote-endpoint = <&funnel2_out_port0>;
                 };
             };
@@ -225,13 +213,11 @@
         };
     };
 
-    // replicator
     replicator {
         compatible = "arm,coresight-replicator";
         in-ports {
             port {
                 replicator_in_port0: endpoint {
-                    slave-mode;
                     remote-endpoint = <&etf2_out_port>;
                 };
             };
@@ -254,44 +240,36 @@
         };
     };
 
-    // ETR - trace router
     etr@fe970000 {
         compatible = "arm,coresight-tmc", "arm,primecell";
         reg = <0 0xfe970000 0 0x1000>;
-        // iommus = <&smmu_etr 0>;
 
         clocks = <&misc_clk>;
         clock-names = "apb_pclk";
-        // power-domains = <&scpi_devpd 0>;
         in-ports {
             port {
                 etr_in_port: endpoint {
-                    slave-mode;
                     remote-endpoint = <&replicator_out_port0>;
                 };
             };
         };
     };
 
-    // TPIU
     tpiu@fe980000  {
         compatible = "arm,coresight-tpiu", "arm,primecell";
         reg = <0 0xfe980000 0 0x1000>;
 
-        clocks = <&misc_clk>; // add PL clock also someday
+        clocks = <&misc_clk>;
         clock-names = "apb_pclk";
-        // power-domains = <&scpi_devpd 0>;
         in-ports {
             port {
                 tpiu_in_port: endpoint {
-                    slave-mode;
                     remote-endpoint = <&replicator_out_port1>;
                 };
             };
         };
     };
 
-    // STM
     stm@fe9c0000 {
         compatible = "arm,coresight-stm", "arm,primecell";
         reg = <0 0xfe9c0000 0 0x1000>,
@@ -299,7 +277,6 @@
         reg-names = "stm-base", "stm-stimulus-base";
         clocks = <&misc_clk>;
         clock-names = "apb_pclk";
-        // power-domains = <&scpi_devpd 0>;
         out-ports {
             port {
                 stm_out_port: endpoint {
