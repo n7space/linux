@@ -232,4 +232,5 @@ def process_event(param_dict):
 		print "Address range [ %s .. %s ]: isn't in same dso" % (start_addr, stop_addr)
 		return
 
+	print('Timestamp 0x%lx' % sample['time'])
 	dump_disam(prev_dso, start_addr, stop_addr)
