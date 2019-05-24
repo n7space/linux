@@ -269,10 +269,39 @@ cs_etm_decoder__create_etm_packet_printer(struct cs_etm_trace_params *t_params,
 						     trace_config);
 }
 
+static void
+cs_etm_decoder__timestamp_pending_packets(struct cs_etm_packet_queue *packet_queue)
+{
+	u32 count, head;
+	struct cs_etm_packet *packet, *prev_packet;
+
+	count = packet_queue->packet_count;
+	if (count == 0)
+		return;
+
+	prev_packet = NULL;
+	head = packet_queue->head;
+	while (count--) {
+		head = (head + 1) & (CS_ETM_PACKET_MAX_BUFFER - 1);
+
+		packet = &packet_queue->packet_buffer[head];
+
+		if (packet->sample_type != CS_ETM_RANGE &&
+		    packet->sample_type != CS_ETM_DISCONTINUITY)
+			continue;
+
+		/* TODO: find better approximation of the number of instructions per cycle. */
+		if (!prev_packet)
+			packet->timestamp = packet_queue->timestamp;
+		else
+			packet->timestamp = prev_packet->timestamp + prev_packet->instr_count;
+
+		prev_packet = packet;
+	}
+}
+
 static ocsd_datapath_resp_t
-cs_etm_decoder__do_soft_timestamp(struct cs_etm_queue *etmq,
-				  struct cs_etm_packet_queue *packet_queue,
-				  const uint8_t trace_chan_id)
+cs_etm_decoder__do_soft_timestamp(struct cs_etm_packet_queue *packet_queue)
 {
 	/* No timestamp packet has been received, nothing to do */
 	if (!packet_queue->timestamp)
@@ -283,9 +312,6 @@ cs_etm_decoder__do_soft_timestamp(struct cs_etm_queue *etmq,
 	/* Estimate the timestamp for the next range packet */
 	packet_queue->next_timestamp += packet_queue->instr_count;
 	packet_queue->instr_count = 0;
-
-	/* Tell the front end which traceid_queue needs attention */
-	cs_etm__etmq_set_traceid_queue_timestamp(etmq, trace_chan_id);
 
 	return OCSD_RESP_WAIT;
 }
@@ -322,6 +348,9 @@ cs_etm_decoder__do_hard_timestamp(struct cs_etm_queue *etmq,
 	packet_queue->timestamp = elem->timestamp - packet_queue->instr_count;
 	packet_queue->next_timestamp = elem->timestamp;
 	packet_queue->instr_count = 0;
+
+	/* Timestamp range packets that got queued up to this point */
+	cs_etm_decoder__timestamp_pending_packets(packet_queue);
 
 	/* Tell the front end which traceid_queue needs attention */
 	cs_etm__etmq_set_traceid_queue_timestamp(etmq, trace_chan_id);
@@ -371,6 +400,7 @@ cs_etm_decoder__buffer_packet(struct cs_etm_packet_queue *packet_queue,
 	packet_queue->packet_buffer[et].flags = 0;
 	packet_queue->packet_buffer[et].exception_number = UINT32_MAX;
 	packet_queue->packet_buffer[et].trace_chan_id = trace_chan_id;
+	packet_queue->packet_buffer[et].timestamp = 0;
 
 	if (packet_queue->packet_count == CS_ETM_PACKET_MAX_BUFFER - 1)
 		return OCSD_RESP_WAIT;
@@ -435,10 +465,6 @@ cs_etm_decoder__buffer_range(struct cs_etm_queue *etmq,
 
 	packet->last_instr_size = elem->last_instr_sz;
 
-	/* per-thread scenario, no need to generate a timestamp */
-	if (cs_etm__etmq_is_timeless(etmq))
-		goto out;
-
 	/*
 	 * The packet queue is full and we haven't seen a timestamp (had we
 	 * seen one the packet queue wouldn't be full).  Let the front end
@@ -448,9 +474,14 @@ cs_etm_decoder__buffer_range(struct cs_etm_queue *etmq,
 		goto out;
 
 	packet_queue->instr_count += elem->num_instr_range;
+	ret = cs_etm_decoder__do_soft_timestamp(packet_queue);
+	if (ret == OCSD_RESP_CONT)
+		goto out;
+
 	/* Tell the front end we have a new timestamp to process */
-	ret = cs_etm_decoder__do_soft_timestamp(etmq, packet_queue,
-						trace_chan_id);
+	packet->timestamp = packet_queue->timestamp;
+	if (!cs_etm__etmq_is_timeless(etmq))
+		cs_etm__etmq_set_traceid_queue_timestamp(etmq, trace_chan_id);
 out:
 	return ret;
 }
@@ -459,13 +490,26 @@ static ocsd_datapath_resp_t
 cs_etm_decoder__buffer_discontinuity(struct cs_etm_packet_queue *queue,
 				     const uint8_t trace_chan_id)
 {
+	int ret;
+	struct cs_etm_packet *packet;
+	u64 timestamp;
+
 	/*
 	 * Something happened and who knows when we'll get new traces so
 	 * reset time statistics.
+	 * Record the last observed timestamp, so the last branch sample
+	 * before discontinuity can be marked with it.
 	 */
+	timestamp = queue->timestamp;
 	cs_etm_decoder__reset_timestamp(queue);
-	return cs_etm_decoder__buffer_packet(queue, trace_chan_id,
+
+	ret = cs_etm_decoder__buffer_packet(queue, trace_chan_id,
 					     CS_ETM_DISCONTINUITY);
+
+	packet = &queue->packet_buffer[queue->tail];
+	packet->timestamp = timestamp;
+
+	return ret;
 }
 
 static ocsd_datapath_resp_t

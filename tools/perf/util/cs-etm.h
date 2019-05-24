@@ -124,6 +124,7 @@ struct cs_etm_packet {
 	enum cs_etm_isa isa;
 	u64 start_addr;
 	u64 end_addr;
+	u64 timestamp;
 	u32 instr_count;
 	u32 last_instr_type;
 	u32 last_instr_subtype;
