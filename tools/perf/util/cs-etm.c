@@ -204,6 +204,7 @@ static void cs_etm__clear_packet_queue(struct cs_etm_packet_queue *queue)
 		queue->packet_buffer[i].exception_number = UINT32_MAX;
 		queue->packet_buffer[i].trace_chan_id = UINT8_MAX;
 		queue->packet_buffer[i].cpu = INT_MIN;
+		queue->packet_buffer[i].timestamp = 0;
 	}
 }
 
@@ -1098,6 +1099,7 @@ static int cs_etm__synth_instruction_sample(struct cs_etm_queue *etmq,
 	sample.flags = tidq->prev_packet->flags;
 	sample.insn_len = 1;
 	sample.cpumode = event->sample.header.misc;
+	sample.time = tidq->packet->timestamp;
 
 	if (etm->synth_opts.last_branch) {
 		cs_etm__copy_last_branch_rb(etmq, tidq);
@@ -1157,6 +1159,7 @@ static int cs_etm__synth_branch_sample(struct cs_etm_queue *etmq,
 	sample.cpu = tidq->packet->cpu;
 	sample.flags = tidq->prev_packet->flags;
 	sample.cpumode = event->sample.header.misc;
+	sample.time = tidq->packet->timestamp;
 
 	/*
 	 * perf report cannot handle events without a branch stack
