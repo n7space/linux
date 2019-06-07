@@ -270,27 +270,27 @@ cs_etm_decoder__create_etm_packet_printer(struct cs_etm_trace_params *t_params,
 }
 
 static void
-cs_etm_decoder__timestamp_pending_packets(struct cs_etm_packet_queue *packet_queue)
+cs_etm_decoder__timestamp_pending_packets(struct cs_etm_packet_queue *queue)
 {
 	struct cs_etm_packet *packet;
 	u64 next_timestamp;
 	u32 count, head;
 
-	count = packet_queue->packet_count;
+	count = queue->packet_count;
 	if (count == 0)
 		return;
 
-	head = packet_queue->head;
-	next_timestamp = packet_queue->timestamp;
+	head = queue->head;
+	next_timestamp = queue->timestamp;
 	while (count--) {
 		head = (head + 1) & (CS_ETM_PACKET_MAX_BUFFER - 1);
-		packet = &packet_queue->packet_buffer[head];
+		packet = &queue->packet_buffer[head];
 
 		if (packet->sample_type != CS_ETM_RANGE)
 			continue;
 
 		packet->timestamp = next_timestamp;
-		/* TODO: find better approximation of the number of instructions per cycle. */
+		/* TODO: better approximation of instruction range duration */
 		next_timestamp += packet->instr_count;
 	}
 }
@@ -484,7 +484,7 @@ cs_etm_decoder__buffer_discontinuity(struct cs_etm_packet_queue *queue,
 	struct cs_etm_packet *packet;
 
 	ret = cs_etm_decoder__buffer_packet(queue, trace_chan_id,
-					     CS_ETM_DISCONTINUITY);
+					    CS_ETM_DISCONTINUITY);
 
 	packet = &queue->packet_buffer[queue->tail];
 	packet->timestamp = queue->timestamp;
