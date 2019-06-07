@@ -272,30 +272,26 @@ cs_etm_decoder__create_etm_packet_printer(struct cs_etm_trace_params *t_params,
 static void
 cs_etm_decoder__timestamp_pending_packets(struct cs_etm_packet_queue *packet_queue)
 {
+	struct cs_etm_packet *packet;
+	u64 next_timestamp;
 	u32 count, head;
-	struct cs_etm_packet *packet, *prev_packet;
 
 	count = packet_queue->packet_count;
 	if (count == 0)
 		return;
 
-	prev_packet = NULL;
 	head = packet_queue->head;
+	next_timestamp = packet_queue->timestamp;
 	while (count--) {
 		head = (head + 1) & (CS_ETM_PACKET_MAX_BUFFER - 1);
-
 		packet = &packet_queue->packet_buffer[head];
 
 		if (packet->sample_type != CS_ETM_RANGE)
 			continue;
 
+		packet->timestamp = next_timestamp;
 		/* TODO: find better approximation of the number of instructions per cycle. */
-		if (!prev_packet)
-			packet->timestamp = packet_queue->timestamp;
-		else
-			packet->timestamp = prev_packet->timestamp + prev_packet->instr_count;
-
-		prev_packet = packet;
+		next_timestamp += packet->instr_count;
 	}
 }
 
