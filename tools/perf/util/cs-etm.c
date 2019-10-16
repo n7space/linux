@@ -1132,7 +1132,7 @@ static int cs_etm__synth_instruction_sample(struct cs_etm_queue *etmq,
 	sample.cpu = tidq->packet->cpu;
 	sample.flags = tidq->prev_packet->flags;
 	sample.cpumode = event->sample.header.misc;
-	sample.time = tidq->packet->timestamp;
+	sample.time = tidq->prev_packet->timestamp;
 
 	cs_etm__copy_insn(etmq, tidq->trace_chan_id, tidq->packet, &sample);
 
@@ -1194,7 +1194,7 @@ static int cs_etm__synth_branch_sample(struct cs_etm_queue *etmq,
 	sample.cpu = tidq->packet->cpu;
 	sample.flags = tidq->prev_packet->flags;
 	sample.cpumode = event->sample.header.misc;
-	sample.time = tidq->packet->timestamp;
+	sample.time = tidq->prev_packet->timestamp;
 
 	cs_etm__copy_insn(etmq, tidq->trace_chan_id, tidq->prev_packet,
 			  &sample);
