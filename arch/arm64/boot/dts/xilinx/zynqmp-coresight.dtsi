@@ -98,7 +98,7 @@
     };
 
     funnel1@fe920000 {
-        compatible = "arm,coresight-funnel", "arm,primecell";
+        compatible = "arm,coresight-dynamic-funnel", "arm,primecell";
         reg = <0 0xfe920000 0 0x1000>;
         clocks = <&misc_clk>;
         clock-names = "apb_pclk";
@@ -140,7 +140,7 @@
     };
 
     funnel2@fe930000 {
-        compatible = "arm,coresight-funnel", "arm,primecell";
+        compatible = "arm,coresight-dynamic-funnel", "arm,primecell";
         reg = <0 0xfe930000 0 0x1000>;
         clocks = <&misc_clk>;
         clock-names = "apb_pclk";
@@ -214,7 +214,7 @@
     };
 
     replicator {
-        compatible = "arm,coresight-replicator";
+        compatible = "arm,coresight-static-replicator";
         in-ports {
             port {
                 replicator_in_port0: endpoint {
