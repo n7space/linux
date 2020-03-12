@@ -270,32 +270,6 @@ cs_etm_decoder__create_etm_packet_printer(struct cs_etm_trace_params *t_params,
 }
 
 static void
-cs_etm_decoder__timestamp_pending_packets(struct cs_etm_packet_queue *queue)
-{
-	struct cs_etm_packet *packet;
-	u64 next_timestamp;
-	u32 count, head;
-
-	count = queue->packet_count;
-	if (count == 0)
-		return;
-
-	head = queue->head;
-	next_timestamp = queue->timestamp;
-	while (count--) {
-		head = (head + 1) & (CS_ETM_PACKET_MAX_BUFFER - 1);
-		packet = &queue->packet_buffer[head];
-
-		if (packet->sample_type != CS_ETM_RANGE)
-			continue;
-
-		packet->timestamp = next_timestamp;
-		/* TODO: better approximation of instruction range duration */
-		next_timestamp += packet->instr_count;
-	}
-}
-
-static void
 cs_etm_decoder__do_soft_timestamp(struct cs_etm_packet_queue *packet_queue)
 {
 	/* No timestamp packet has been received, nothing to do */
@@ -321,6 +295,12 @@ cs_etm_decoder__do_hard_timestamp(struct cs_etm_queue *etmq,
 	if (!packet_queue)
 		return OCSD_RESP_FATAL_SYS_ERR;
 
+	/**
+	 * Store the current timestamp in queue, so it can propagate to range
+	 * and discontinuity packets
+	 */
+	packet_queue->last_timestamp = elem->timestamp;
+
 	/*
 	 * We've seen a timestamp packet before - simply record the new value.
 	 * Function do_soft_timestamp() will report the value to the front end,
@@ -342,9 +322,6 @@ cs_etm_decoder__do_hard_timestamp(struct cs_etm_queue *etmq,
 	packet_queue->next_timestamp = elem->timestamp;
 	packet_queue->instr_count = 0;
 
-	/* Timestamp range packets that got queued up to this point */
-	cs_etm_decoder__timestamp_pending_packets(packet_queue);
-
 	/* Tell the front end which traceid_queue needs attention */
 	cs_etm__etmq_set_traceid_queue_timestamp(etmq, trace_chan_id);
 
@@ -356,6 +333,7 @@ static void
 cs_etm_decoder__reset_timestamp(struct cs_etm_packet_queue *packet_queue)
 {
 	packet_queue->timestamp = 0;
+	packet_queue->last_timestamp = 0;
 	packet_queue->next_timestamp = 0;
 	packet_queue->instr_count = 0;
 }
@@ -459,7 +437,8 @@ cs_etm_decoder__buffer_range(struct cs_etm_queue *etmq,
 	packet->last_instr_size = elem->last_instr_sz;
 	packet_queue->instr_count += elem->num_instr_range;
 	cs_etm_decoder__do_soft_timestamp(packet_queue);
-	packet->timestamp = packet_queue->timestamp;
+	packet->timestamp = packet_queue->last_timestamp;
+	packet_queue->last_timestamp = 0;
 
 	/*
 	 * The packet queue is full and we haven't seen a timestamp (had we
@@ -487,7 +466,7 @@ cs_etm_decoder__buffer_discontinuity(struct cs_etm_packet_queue *queue,
 					    CS_ETM_DISCONTINUITY);
 
 	packet = &queue->packet_buffer[queue->tail];
-	packet->timestamp = queue->timestamp;
+	packet->timestamp = queue->last_timestamp;
 
 	/*
 	 * Something happened and who knows when we'll get new traces so
