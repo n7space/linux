@@ -1194,7 +1194,12 @@ static int cs_etm__synth_branch_sample(struct cs_etm_queue *etmq,
 	sample.cpu = tidq->packet->cpu;
 	sample.flags = tidq->prev_packet->flags;
 	sample.cpumode = event->sample.header.misc;
-	sample.time = tidq->prev_packet->timestamp;
+	/**
+	 * Timestamp range sample with timestamp of the packet that represents
+	 * reaching the point in code. This essentially propagates I_TIMESTAMP
+	 * elements to branch events as they appear in the trace stream.
+	 */
+	sample.time = tidq->packet->timestamp;
 
 	cs_etm__copy_insn(etmq, tidq->trace_chan_id, tidq->prev_packet,
 			  &sample);
