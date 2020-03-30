@@ -333,7 +333,6 @@ static void
 cs_etm_decoder__reset_timestamp(struct cs_etm_packet_queue *packet_queue)
 {
 	packet_queue->timestamp = 0;
-	packet_queue->last_timestamp = 0;
 	packet_queue->next_timestamp = 0;
 	packet_queue->instr_count = 0;
 }
@@ -438,7 +437,6 @@ cs_etm_decoder__buffer_range(struct cs_etm_queue *etmq,
 	packet_queue->instr_count += elem->num_instr_range;
 	cs_etm_decoder__do_soft_timestamp(packet_queue);
 	packet->timestamp = packet_queue->last_timestamp;
-	packet_queue->last_timestamp = 0;
 
 	/*
 	 * The packet queue is full and we haven't seen a timestamp (had we
